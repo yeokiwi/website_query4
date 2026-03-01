@@ -13,12 +13,20 @@ export default function App() {
   const [showBatch, setShowBatch] = useState(false);
   const [showReports, setShowReports] = useState(false);
   const [batchRunning, setBatchRunning] = useState(false);
+  const [providerInfo, setProviderInfo] = useState(null);
   const { messages, isLoading, sendMessage, clearChat } = useChat();
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode);
     saveTheme(darkMode ? 'dark' : 'light');
   }, [darkMode]);
+
+  useEffect(() => {
+    fetch('/api/config')
+      .then((r) => r.json())
+      .then(setProviderInfo)
+      .catch(() => {});
+  }, []);
 
   const handleUrlQuery = (url) => {
     const prompt = `I need you to examine ${url} and focus specifically on:
@@ -40,6 +48,7 @@ Please distinguish between what you can confirm as recent vs. what appears to be
         onBatchMonitor={() => { setShowBatch(true); setShowReports(false); }}
         onReports={() => { setShowReports(true); setShowBatch(false); }}
         onClearChat={clearChat}
+        providerInfo={providerInfo}
       />
 
       {showBatch && (

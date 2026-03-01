@@ -1,9 +1,22 @@
-export default function Header({ darkMode, onToggleDark, onBatchMonitor, onReports, onClearChat }) {
+export default function Header({ darkMode, onToggleDark, onBatchMonitor, onReports, onClearChat, providerInfo }) {
+  const providerLabel = providerInfo
+    ? `${providerInfo.provider === 'deepseek' ? 'DeepSeek' : 'Anthropic'} — ${providerInfo.model}`
+    : null;
+
+  const providerColor = providerInfo?.provider === 'deepseek'
+    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+    : 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300';
+
   return (
-    <header className="flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
-      <div className="flex items-center gap-2">
+    <header className="flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm flex-wrap gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <h1 className="text-lg font-bold text-gray-800 dark:text-gray-100">LLM Chat</h1>
         <span className="text-sm text-gray-500 dark:text-gray-400">/ with web browsing</span>
+        {providerLabel && (
+          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${providerColor}`}>
+            {providerLabel}
+          </span>
+        )}
       </div>
       <div className="flex items-center gap-2">
         <button

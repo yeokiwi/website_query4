@@ -4,7 +4,7 @@ import cors from 'cors';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { createMessage } from './services/llmService.js';
+import { createMessage, getProviderInfo } from './services/llmService.js';
 import { webSearch } from './services/webSearchService.js';
 import { fetchUrl, isBlockedUrl } from './services/fetchUrlService.js';
 
@@ -394,6 +394,12 @@ app.get('/api/reports/:filename', (req, res) => {
 
   const content = fs.readFileSync(filePath, 'utf-8');
   res.type('text/markdown').send(content);
+});
+
+// ── GET /api/config ──────────────────────────────────────
+
+app.get('/api/config', (req, res) => {
+  res.json(getProviderInfo());
 });
 
 // ── GET /api/health ──────────────────────────────────────
