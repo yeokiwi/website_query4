@@ -75,7 +75,8 @@ function sseWrite(res, event, data) {
 
 function getPromptForUrl(url) {
   return `I need you to examine ${url} and focus specifically on:
-- What's new or changed in the last 30 days?
+- Get the current system time in 2026 and use it as today's date reference
+- What's new or changed in the last 30 days with respect to the current system time?
 - Any announcements, blog posts, or news from the past month
 - Updates to products, services, or features
 - Changes to pricing, terms of service, or policies
