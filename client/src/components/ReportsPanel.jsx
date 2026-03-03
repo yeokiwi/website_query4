@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { formatDate } from '../utils/formatTime';
@@ -8,19 +8,23 @@ export default function ReportsPanel({ onClose }) {
   const [loading, setLoading] = useState(true);
   const [selectedReport, setSelectedReport] = useState(null);
   const [reportContent, setReportContent] = useState('');
+  const [deleting, setDeleting] = useState(false);
+
+  const fetchReports = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/reports');
+      const data = await res.json();
+      setReports(data.reports || []);
+    } catch {
+      setReports([]);
+    }
+    setLoading(false);
+  }, []);
 
   useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch('/api/reports');
-        const data = await res.json();
-        setReports(data.reports || []);
-      } catch {
-        setReports([]);
-      }
-      setLoading(false);
-    })();
-  }, []);
+    fetchReports();
+  }, [fetchReports]);
 
   const viewReport = async (filename) => {
     setSelectedReport(filename);
@@ -31,6 +35,37 @@ export default function ReportsPanel({ onClose }) {
     } catch {
       setReportContent('Failed to load report.');
     }
+  };
+
+  const deleteReport = async (filename, e) => {
+    e.stopPropagation();
+    if (!confirm(`Delete report "${filename}"?`)) return;
+    setDeleting(true);
+    try {
+      await fetch(`/api/reports/${filename}`, { method: 'DELETE' });
+      if (selectedReport === filename) {
+        setSelectedReport(null);
+        setReportContent('');
+      }
+      await fetchReports();
+    } catch {
+      // ignore
+    }
+    setDeleting(false);
+  };
+
+  const deleteAllReports = async () => {
+    if (!confirm(`Delete all ${reports.length} reports?`)) return;
+    setDeleting(true);
+    try {
+      await fetch('/api/reports', { method: 'DELETE' });
+      setSelectedReport(null);
+      setReportContent('');
+      await fetchReports();
+    } catch {
+      // ignore
+    }
+    setDeleting(false);
   };
 
   const formatSize = (bytes) => {
@@ -53,14 +88,34 @@ export default function ReportsPanel({ onClose }) {
             ) : 'Reports'}
             {selectedReport && <span className="text-gray-500">/ {selectedReport}</span>}
           </h2>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+          <div className="flex items-center gap-2">
+            {!selectedReport && reports.length > 0 && (
+              <button
+                onClick={deleteAllReports}
+                disabled={deleting}
+                className="px-3 py-1.5 text-sm rounded-lg bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 font-medium disabled:opacity-50"
+              >
+                Delete All
+              </button>
+            )}
+            {selectedReport && (
+              <button
+                onClick={(e) => deleteReport(selectedReport, e)}
+                disabled={deleting}
+                className="px-3 py-1.5 text-sm rounded-lg bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 font-medium disabled:opacity-50"
+              >
+                Delete
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         {selectedReport ? (
@@ -82,18 +137,30 @@ export default function ReportsPanel({ onClose }) {
               try { domain = new URL(report.url).hostname; } catch { domain = report.filename; }
               return (
                 <li key={report.filename}>
-                  <button
+                  <div
                     onClick={() => viewReport(report.filename)}
-                    className="w-full text-left p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 transition-colors"
+                    className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 transition-colors cursor-pointer"
                   >
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-sm">{domain}</span>
-                      <span className="text-xs text-gray-400">{formatSize(report.size)}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium text-sm">{domain}</span>
+                        <span className="text-xs text-gray-400 ml-2">{formatSize(report.size)}</span>
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        {formatDate(report.timestamp)}
+                      </div>
                     </div>
-                    <div className="text-xs text-gray-500 mt-1">
-                      {formatDate(report.timestamp)}
-                    </div>
-                  </button>
+                    <button
+                      onClick={(e) => deleteReport(report.filename, e)}
+                      disabled={deleting}
+                      className="ml-3 p-1.5 text-gray-400 hover:text-red-500 dark:hover:text-red-400 rounded hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 flex-shrink-0"
+                      title="Delete report"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
                 </li>
               );
             })}

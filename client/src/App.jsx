@@ -8,12 +8,18 @@ import ReportsPanel from './components/ReportsPanel';
 import { useChat } from './hooks/useChat';
 import { loadTheme, saveTheme } from './utils/storage';
 
+function getTodayString() {
+  const d = new Date();
+  return d.toISOString().slice(0, 10);
+}
+
 export default function App() {
   const [darkMode, setDarkMode] = useState(() => loadTheme() === 'dark');
   const [showBatch, setShowBatch] = useState(false);
   const [showReports, setShowReports] = useState(false);
   const [batchRunning, setBatchRunning] = useState(false);
   const [providerInfo, setProviderInfo] = useState(null);
+  const [currentDate, setCurrentDate] = useState(getTodayString);
   const { messages, isLoading, sendMessage, clearChat } = useChat();
 
   useEffect(() => {
@@ -29,9 +35,9 @@ export default function App() {
   }, []);
 
   const handleUrlQuery = (url) => {
-    const prompt = `I need you to examine ${url} and focus specifically on:
-- Get the current system time in 2026 and use it as today's date reference
-- What's new or changed in the last 30 days with respect to the current system time?
+    const dateLine = currentDate ? `The current date is ${currentDate}. ` : '';
+    const prompt = `${dateLine}I need you to examine ${url} and focus specifically on:
+- What's new or changed in the last 30 days?
 - Any announcements, blog posts, or news from the past month
 - Updates to products, services, or features
 - Changes to pricing, terms of service, or policies
@@ -57,6 +63,8 @@ Please distinguish between what you can confirm as recent vs. what appears to be
           onClose={() => setShowBatch(false)}
           batchRunning={batchRunning}
           setBatchRunning={setBatchRunning}
+          currentDate={currentDate}
+          onDateChange={setCurrentDate}
         />
       )}
 
@@ -66,7 +74,12 @@ Please distinguish between what you can confirm as recent vs. what appears to be
 
       {!showBatch && !showReports && (
         <>
-          <UrlQueryBar onSubmit={handleUrlQuery} disabled={isDisabled} />
+          <UrlQueryBar
+            onSubmit={handleUrlQuery}
+            disabled={isDisabled}
+            currentDate={currentDate}
+            onDateChange={setCurrentDate}
+          />
 
           <div className="flex-1 overflow-y-auto">
             <MessageList messages={messages} isLoading={isLoading} />

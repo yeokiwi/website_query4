@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import WebsiteListEditor from './WebsiteListEditor';
 
-export default function BatchMonitorPanel({ onClose, batchRunning, setBatchRunning }) {
+export default function BatchMonitorPanel({ onClose, batchRunning, setBatchRunning, currentDate, onDateChange }) {
   const [urls, setUrls] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showEditor, setShowEditor] = useState(false);
@@ -37,6 +37,7 @@ export default function BatchMonitorPanel({ onClose, batchRunning, setBatchRunni
       const response = await fetch('/api/batch-monitor', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentDate }),
       });
 
       const reader = response.body.getReader();
@@ -124,7 +125,7 @@ export default function BatchMonitorPanel({ onClose, batchRunning, setBatchRunni
           </div>
         ) : (
           <>
-            <div className="flex items-center gap-2 mb-4">
+            <div className="flex items-center gap-2 mb-4 flex-wrap">
               <button
                 onClick={handleRunAll}
                 disabled={batchRunning}
@@ -139,6 +140,18 @@ export default function BatchMonitorPanel({ onClose, batchRunning, setBatchRunni
               >
                 Edit List
               </button>
+              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <input
+                  type="date"
+                  value={currentDate}
+                  onChange={(e) => onDateChange(e.target.value)}
+                  disabled={batchRunning}
+                  className="bg-transparent outline-none text-sm text-gray-800 dark:text-gray-200 disabled:opacity-50"
+                />
+              </div>
               {totalCount > 0 && (
                 <span className="text-sm text-gray-500 ml-auto">
                   {completedCount} / {totalCount} completed

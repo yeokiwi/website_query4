@@ -73,10 +73,10 @@ function sseWrite(res, event, data) {
   res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
 }
 
-function getPromptForUrl(url) {
-  return `I need you to examine ${url} and focus specifically on:
-- Get the current system time in 2026 and use it as today's date reference
-- What's new or changed in the last 30 days with respect to the current system time?
+function getPromptForUrl(url, currentDate) {
+  const dateLine = currentDate ? `The current date is ${currentDate}. ` : '';
+  return `${dateLine}I need you to examine ${url} and focus specifically on:
+- What's new or changed in the last 30 days?
 - Any announcements, blog posts, or news from the past month
 - Updates to products, services, or features
 - Changes to pricing, terms of service, or policies
@@ -300,6 +300,8 @@ app.post('/api/batch-monitor', async (req, res) => {
     return res.status(400).json({ error: 'No URLs in website.md' });
   }
 
+  const { currentDate } = req.body || {};
+
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
@@ -315,7 +317,7 @@ app.post('/api/batch-monitor', async (req, res) => {
     const url = urls[i];
     sseWrite(res, 'batch_item_start', { index: i, url });
 
-    const prompt = getPromptForUrl(url);
+    const prompt = getPromptForUrl(url, currentDate);
     const messages = [{ role: 'user', content: prompt }];
     const filename = generateReportFilename(url);
 
@@ -395,6 +397,37 @@ app.get('/api/reports/:filename', (req, res) => {
 
   const content = fs.readFileSync(filePath, 'utf-8');
   res.type('text/markdown').send(content);
+});
+
+// ── DELETE /api/reports/:filename ─────────────────────────
+
+app.delete('/api/reports/:filename', (req, res) => {
+  const filename = req.params.filename;
+  if (filename.includes('..') || filename.includes('/')) {
+    return res.status(400).json({ error: 'Invalid filename' });
+  }
+
+  const filePath = path.join(REPORTS_DIR, filename);
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ error: 'Report not found' });
+  }
+
+  fs.unlinkSync(filePath);
+  res.json({ deleted: filename });
+});
+
+// ── DELETE /api/reports ──────────────────────────────────
+
+app.delete('/api/reports', (req, res) => {
+  if (!fs.existsSync(REPORTS_DIR)) {
+    return res.json({ deleted: 0 });
+  }
+
+  const files = fs.readdirSync(REPORTS_DIR).filter((f) => f.endsWith('.md'));
+  for (const file of files) {
+    fs.unlinkSync(path.join(REPORTS_DIR, file));
+  }
+  res.json({ deleted: files.length });
 });
 
 // ── GET /api/config ──────────────────────────────────────
