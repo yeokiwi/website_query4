@@ -52,6 +52,24 @@ A single-page app that monitors websites for recent changes. Users query individ
 
 ---
 
+## Authentication
+
+The app is protected by a login page. Only authenticated users can access the chat, batch monitor, and reports.
+
+- **Username:** `admin`
+- **Password:** `ykw12345`
+
+### Implementation
+
+- `LoginPage.jsx` renders a username/password form before the main app is shown
+- On submit, `POST /api/auth/login` with `{ username, password }` — returns `{ token }` on success, `401` on failure
+- Token is stored in `localStorage` and attached to all subsequent API requests via `authFetch.js`
+- On the backend, a middleware validates the token on protected routes; unauthenticated requests return `401`
+- `POST /api/auth/logout` clears the session; frontend removes the token and redirects to the login page
+- `/api/health` is public (no auth required)
+
+---
+
 ## Core Workflows
 
 1. **Single URL Query** — user enters a URL, backend runs the agentic loop, streams result to chat UI
