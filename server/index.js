@@ -11,7 +11,7 @@ import { fetchUrl, isBlockedUrl } from './services/fetchUrlService.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.resolve(__dirname, '..');
-const WEBSITE_FILE = path.join(PROJECT_ROOT, 'website.md');
+const WEBSITE_FILE = path.resolve(process.env.WEBSITE_FILE || path.join(PROJECT_ROOT, 'website.md'));
 const REPORTS_DIR = path.resolve(process.env.REPORTS_DIR || path.join(PROJECT_ROOT, 'reports'));
 const MAX_TOOL_CALLS = parseInt(process.env.MAX_TOOL_CALLS_PER_TURN || '10', 10);
 const PORT = parseInt(process.env.PORT || '3001', 10);
@@ -518,6 +518,6 @@ if (fs.existsSync(clientDist)) {
 
 // ── Start ────────────────────────────────────────────────
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+app.listen(PORT, HOST, () => {
+  console.log(`Server running on http://${HOST}:${PORT}`);
 });
