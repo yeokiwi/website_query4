@@ -1,0 +1,44 @@
+services:
+  - type: web
+    name: website-change-monitor
+    runtime: node
+    plan: starter
+    buildCommand: npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: LLM_PROVIDER
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: MODEL_NAME
+        sync: false
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: DEEPSEEK_MODEL
+        sync: false
+      - key: DEEPSEEK_BASE_URL
+        sync: false
+      - key: SEARCH_PROVIDER
+        sync: false
+      - key: BRAVE_SEARCH_API_KEY
+        sync: false
+      - key: SERPAPI_API_KEY
+        sync: false
+      - key: MAX_TOKENS
+        value: "4096"
+      - key: TEMPERATURE
+        value: "0.7"
+      - key: MAX_TOOL_CALLS_PER_TURN
+        value: "10"
+      - key: FETCH_MAX_CHARS
+        value: "8000"
+      - key: REPORTS_DIR
+        value: /data/reports
+      - key: WEBSITE_FILE
+        value: /data/website.md
+    disk:
+      name: data
+      mountPath: /data
+      sizeGB: 1
