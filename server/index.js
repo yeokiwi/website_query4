@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -16,6 +17,12 @@ const MAX_TOOL_CALLS = parseInt(process.env.MAX_TOOL_CALLS_PER_TURN || '10', 10)
 const PORT = parseInt(process.env.PORT || '3001', 10);
 const HOST = process.env.HOST || '0.0.0.0';
 
+const AUTH_USERNAME = process.env.AUTH_USERNAME || 'admin';
+const AUTH_PASSWORD = process.env.AUTH_PASSWORD || 'dso12345';
+
+// Active session tokens (in-memory; cleared on server restart)
+const activeSessions = new Set();
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -30,6 +37,49 @@ if (fs.existsSync(clientDist)) {
 if (!fs.existsSync(REPORTS_DIR)) {
   fs.mkdirSync(REPORTS_DIR, { recursive: true });
 }
+
+// ── Auth ─────────────────────────────────────────────────
+
+app.post('/api/login', (req, res) => {
+  const { username, password } = req.body;
+  if (username === AUTH_USERNAME && password === AUTH_PASSWORD) {
+    const token = crypto.randomUUID();
+    activeSessions.add(token);
+    return res.json({ token });
+  }
+  res.status(401).json({ error: 'Invalid username or password' });
+});
+
+app.post('/api/logout', (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  if (token) activeSessions.delete(token);
+  res.json({ ok: true });
+});
+
+app.get('/api/auth/check', (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  if (token && activeSessions.has(token)) {
+    return res.json({ authenticated: true });
+  }
+  res.status(401).json({ authenticated: false });
+});
+
+// Auth middleware — protect all /api/* routes below this point
+function requireAuth(req, res, next) {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  if (token && activeSessions.has(token)) {
+    return next();
+  }
+  res.status(401).json({ error: 'Unauthorized' });
+}
+
+app.use('/api', (req, res, next) => {
+  // Already handled above (login, logout, auth check, health)
+  if (req.path === '/login' || req.path === '/logout' || req.path === '/auth/check' || req.path === '/health') {
+    return next();
+  }
+  requireAuth(req, res, next);
+});
 
 // ── Helpers ──────────────────────────────────────────────
 

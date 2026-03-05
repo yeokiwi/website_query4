@@ -1,5 +1,6 @@
 const STORAGE_KEY = 'website-monitor-messages';
 const THEME_KEY = 'website-monitor-theme';
+const TOKEN_KEY = 'website-monitor-token';
 
 export function loadMessages() {
   try {
@@ -36,4 +37,24 @@ export function saveTheme(theme) {
   } catch {
     // ignore
   }
+}
+
+export function loadToken() {
+  try {
+    return localStorage.getItem(TOKEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function saveToken(token) {
+  try {
+    localStorage.setItem(TOKEN_KEY, token);
+  } catch {
+    // ignore
+  }
+}
+
+export function clearToken() {
+  localStorage.removeItem(TOKEN_KEY);
 }

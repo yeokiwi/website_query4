@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { formatDate } from '../utils/formatTime';
+import { authFetch } from '../utils/authFetch';
 
 export default function ReportsPanel({ onClose }) {
   const [reports, setReports] = useState([]);
@@ -13,7 +14,7 @@ export default function ReportsPanel({ onClose }) {
   const fetchReports = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/reports');
+      const res = await authFetch('/api/reports');
       const data = await res.json();
       setReports(data.reports || []);
     } catch {
@@ -29,7 +30,7 @@ export default function ReportsPanel({ onClose }) {
   const viewReport = async (filename) => {
     setSelectedReport(filename);
     try {
-      const res = await fetch(`/api/reports/${filename}`);
+      const res = await authFetch(`/api/reports/${filename}`);
       const text = await res.text();
       setReportContent(text);
     } catch {
@@ -42,7 +43,7 @@ export default function ReportsPanel({ onClose }) {
     if (!confirm(`Delete report "${filename}"?`)) return;
     setDeleting(true);
     try {
-      await fetch(`/api/reports/${filename}`, { method: 'DELETE' });
+      await authFetch(`/api/reports/${filename}`, { method: 'DELETE' });
       if (selectedReport === filename) {
         setSelectedReport(null);
         setReportContent('');
@@ -58,7 +59,7 @@ export default function ReportsPanel({ onClose }) {
     if (!confirm(`Delete all ${reports.length} reports?`)) return;
     setDeleting(true);
     try {
-      await fetch('/api/reports', { method: 'DELETE' });
+      await authFetch('/api/reports', { method: 'DELETE' });
       setSelectedReport(null);
       setReportContent('');
       await fetchReports();

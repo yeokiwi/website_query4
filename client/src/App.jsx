@@ -1,12 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Header from './components/Header';
 import UrlQueryBar from './components/UrlQueryBar';
 import MessageList from './components/MessageList';
 import ChatInput from './components/ChatInput';
 import BatchMonitorPanel from './components/BatchMonitorPanel';
 import ReportsPanel from './components/ReportsPanel';
+import LoginPage from './components/LoginPage';
 import { useChat } from './hooks/useChat';
-import { loadTheme, saveTheme } from './utils/storage';
+import { loadTheme, saveTheme, loadToken, saveToken, clearToken } from './utils/storage';
+import { authFetch, setAuthFailureHandler } from './utils/authFetch';
 
 function getTodayString() {
   const d = new Date();
@@ -15,6 +17,8 @@ function getTodayString() {
 
 export default function App() {
   const [darkMode, setDarkMode] = useState(() => loadTheme() === 'dark');
+  const [authenticated, setAuthenticated] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
   const [showBatch, setShowBatch] = useState(false);
   const [showReports, setShowReports] = useState(false);
   const [batchRunning, setBatchRunning] = useState(false);
@@ -26,17 +30,63 @@ export default function App() {
   const [batchStatuses, setBatchStatuses] = useState({});
   const [batchResult, setBatchResult] = useState(null);
 
+  const handleLogout = useCallback(() => {
+    const token = loadToken();
+    if (token) {
+      fetch('/api/logout', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+      }).catch(() => {});
+    }
+    clearToken();
+    setAuthenticated(false);
+  }, []);
+
+  // Register global auth failure handler
+  useEffect(() => {
+    setAuthFailureHandler(() => {
+      setAuthenticated(false);
+    });
+  }, []);
+
+  // Check existing token on mount
+  useEffect(() => {
+    const token = loadToken();
+    if (!token) {
+      setAuthChecked(true);
+      return;
+    }
+    fetch('/api/auth/check', {
+      headers: { 'Authorization': `Bearer ${token}` },
+    })
+      .then((r) => {
+        if (r.ok) {
+          setAuthenticated(true);
+        } else {
+          clearToken();
+        }
+      })
+      .catch(() => clearToken())
+      .finally(() => setAuthChecked(true));
+  }, []);
+
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode);
     saveTheme(darkMode ? 'dark' : 'light');
   }, [darkMode]);
 
   useEffect(() => {
-    fetch('/api/config')
+    if (!authenticated) return;
+    authFetch('/api/config')
       .then((r) => r.json())
       .then(setProviderInfo)
       .catch(() => {});
-  }, []);
+  }, [authenticated]);
+
+  const handleLogin = (token) => {
+    saveToken(token);
+    setAuthenticated(true);
+  };
 
   const handleUrlQuery = (url) => {
     const dateLine = currentDate ? `The current date is ${currentDate}. ` : '';
@@ -56,6 +106,16 @@ Please distinguish between what you can confirm as recent vs. what appears to be
 
   const isDisabled = isLoading || batchRunning;
 
+  // Show nothing while checking auth
+  if (!authChecked) {
+    return <div className="min-h-screen bg-gray-50 dark:bg-gray-900" />;
+  }
+
+  // Show login page if not authenticated
+  if (!authenticated) {
+    return <LoginPage onLogin={handleLogin} />;
+  }
+
   return (
     <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
       <Header
@@ -65,6 +125,7 @@ Please distinguish between what you can confirm as recent vs. what appears to be
         onReports={() => { setShowReports((v) => !v); setShowBatch(false); }}
         onClearChat={clearChat}
         onHome={goHome}
+        onLogout={handleLogout}
         providerInfo={providerInfo}
         showBatch={showBatch}
         showReports={showReports}

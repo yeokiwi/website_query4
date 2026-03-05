@@ -1,4 +1,4 @@
-export default function Header({ darkMode, onToggleDark, onBatchMonitor, onReports, onClearChat, onHome, providerInfo, showBatch, showReports }) {
+export default function Header({ darkMode, onToggleDark, onBatchMonitor, onReports, onClearChat, onHome, onLogout, providerInfo, showBatch, showReports }) {
   const providerLabel = providerInfo
     ? `${providerInfo.provider === 'deepseek' ? 'DeepSeek' : 'Anthropic'} — ${providerInfo.model}`
     : null;
@@ -61,6 +61,15 @@ export default function Header({ darkMode, onToggleDark, onBatchMonitor, onRepor
           className="px-3 py-1.5 text-sm rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 font-medium"
         >
           Clear Chat
+        </button>
+        <button
+          onClick={onLogout}
+          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"
+          title="Sign out"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+          </svg>
         </button>
       </div>
     </header>

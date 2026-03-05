@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { authFetch } from '../utils/authFetch';
 
 export default function WebsiteListEditor({ onClose, disabled }) {
   const [rows, setRows] = useState([]);
@@ -9,7 +10,7 @@ export default function WebsiteListEditor({ onClose, disabled }) {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch('/api/batch-monitor/websites');
+        const res = await authFetch('/api/batch-monitor/websites');
         const data = await res.json();
         const urls = data.urls || [];
         setRows(urls.length > 0 ? urls.map((u) => ({ url: u })) : [{ url: '' }]);
@@ -87,7 +88,7 @@ export default function WebsiteListEditor({ onClose, disabled }) {
 
     setSaving(true);
     try {
-      const res = await fetch('/api/batch-monitor/websites', {
+      const res = await authFetch('/api/batch-monitor/websites', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ urls: cleaned }),
