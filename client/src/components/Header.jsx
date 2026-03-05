@@ -1,4 +1,4 @@
-export default function Header({ darkMode, onToggleDark, onBatchMonitor, onReports, onClearChat, providerInfo }) {
+export default function Header({ darkMode, onToggleDark, onBatchMonitor, onReports, onClearChat, onHome, providerInfo, showBatch, showReports }) {
   const providerLabel = providerInfo
     ? `${providerInfo.provider === 'deepseek' ? 'DeepSeek' : 'Anthropic'} — ${providerInfo.model}`
     : null;
@@ -10,7 +10,9 @@ export default function Header({ darkMode, onToggleDark, onBatchMonitor, onRepor
   return (
     <header className="flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm flex-wrap gap-2">
       <div className="flex items-center gap-2 flex-wrap">
-        <h1 className="text-lg font-bold text-gray-800 dark:text-gray-100">LLM Chat</h1>
+        <button onClick={onHome} className="text-lg font-bold text-gray-800 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+          LLM Chat
+        </button>
         <span className="text-sm text-gray-500 dark:text-gray-400">/ with web browsing</span>
         {providerLabel && (
           <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${providerColor}`}>
@@ -36,13 +38,21 @@ export default function Header({ darkMode, onToggleDark, onBatchMonitor, onRepor
         </button>
         <button
           onClick={onBatchMonitor}
-          className="px-3 py-1.5 text-sm rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 font-medium"
+          className={`px-3 py-1.5 text-sm rounded-lg font-medium ${
+            showBatch
+              ? 'bg-indigo-600 text-white'
+              : 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50'
+          }`}
         >
           Batch Monitor
         </button>
         <button
           onClick={onReports}
-          className="px-3 py-1.5 text-sm rounded-lg bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/50 font-medium"
+          className={`px-3 py-1.5 text-sm rounded-lg font-medium ${
+            showReports
+              ? 'bg-green-600 text-white'
+              : 'bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/50'
+          }`}
         >
           Reports
         </button>

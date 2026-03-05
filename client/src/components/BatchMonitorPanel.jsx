@@ -1,12 +1,20 @@
 import { useState, useEffect, useCallback } from 'react';
 import WebsiteListEditor from './WebsiteListEditor';
 
-export default function BatchMonitorPanel({ onClose, batchRunning, setBatchRunning, currentDate, onDateChange }) {
+export default function BatchMonitorPanel({
+  onClose,
+  batchRunning,
+  setBatchRunning,
+  currentDate,
+  onDateChange,
+  batchStatuses,
+  setBatchStatuses,
+  batchResult,
+  setBatchResult,
+}) {
   const [urls, setUrls] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showEditor, setShowEditor] = useState(false);
-  const [statuses, setStatuses] = useState({});
-  const [batchResult, setBatchResult] = useState(null);
 
   const fetchUrls = useCallback(async () => {
     setLoading(true);
@@ -31,7 +39,7 @@ export default function BatchMonitorPanel({ onClose, batchRunning, setBatchRunni
 
     const initialStatuses = {};
     urls.forEach((url, i) => { initialStatuses[i] = 'pending'; });
-    setStatuses(initialStatuses);
+    setBatchStatuses(initialStatuses);
 
     try {
       const response = await fetch('/api/batch-monitor', {
@@ -62,11 +70,11 @@ export default function BatchMonitorPanel({ onClose, batchRunning, setBatchRunni
           try { data = JSON.parse(dataMatch[1]); } catch { continue; }
 
           if (event === 'batch_item_start') {
-            setStatuses((prev) => ({ ...prev, [data.index]: 'monitoring' }));
+            setBatchStatuses((prev) => ({ ...prev, [data.index]: 'monitoring' }));
           } else if (event === 'batch_item_done') {
-            setStatuses((prev) => ({ ...prev, [data.index]: 'done' }));
+            setBatchStatuses((prev) => ({ ...prev, [data.index]: 'done' }));
           } else if (event === 'batch_item_error') {
-            setStatuses((prev) => ({ ...prev, [data.index]: 'failed' }));
+            setBatchStatuses((prev) => ({ ...prev, [data.index]: 'failed' }));
           } else if (event === 'batch_done') {
             setBatchResult(data);
           }
@@ -79,8 +87,9 @@ export default function BatchMonitorPanel({ onClose, batchRunning, setBatchRunni
     setBatchRunning(false);
   };
 
-  const completedCount = Object.values(statuses).filter((s) => s === 'done' || s === 'failed').length;
-  const totalCount = Object.keys(statuses).length;
+  const completedCount = Object.values(batchStatuses).filter((s) => s === 'done' || s === 'failed').length;
+  const totalCount = Object.keys(batchStatuses).length;
+  const progressPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
   if (showEditor) {
     return (
@@ -159,9 +168,28 @@ export default function BatchMonitorPanel({ onClose, batchRunning, setBatchRunni
               )}
             </div>
 
+            {/* Progress bar */}
+            {totalCount > 0 && (
+              <div className="mb-4">
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ease-out ${
+                      batchResult && !batchResult.error
+                        ? 'bg-green-500'
+                        : batchRunning
+                          ? 'bg-blue-500'
+                          : 'bg-blue-500'
+                    }`}
+                    style={{ width: `${progressPercent}%` }}
+                  />
+                </div>
+                <div className="text-xs text-gray-500 mt-1 text-right">{progressPercent}%</div>
+              </div>
+            )}
+
             <ul className="space-y-2">
               {urls.map((url, i) => {
-                const status = statuses[i];
+                const status = batchStatuses[i];
                 return (
                   <li
                     key={i}

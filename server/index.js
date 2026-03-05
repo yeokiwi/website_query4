@@ -367,12 +367,27 @@ app.get('/api/reports', (req, res) => {
 
     // Parse frontmatter
     let url = '';
-    const match = content.match(/^---\n[\s\S]*?url:\s*(.+)\n[\s\S]*?---/);
-    if (match) url = match[1].trim();
+    const fmMatch = content.match(/^---\n[\s\S]*?url:\s*(.+)\n[\s\S]*?---/);
+    if (fmMatch) url = fmMatch[1].trim();
+
+    // Extract summary: first non-empty, non-heading line after frontmatter
+    let summary = '';
+    const bodyMatch = content.match(/^---\n[\s\S]*?---\n+([\s\S]*)/);
+    if (bodyMatch) {
+      const bodyLines = bodyMatch[1].split('\n');
+      for (const line of bodyLines) {
+        const trimmed = line.trim();
+        if (trimmed && !trimmed.startsWith('#') && !trimmed.startsWith('---')) {
+          summary = trimmed.length > 120 ? trimmed.slice(0, 120) + '...' : trimmed;
+          break;
+        }
+      }
+    }
 
     return {
       filename,
       url,
+      summary,
       timestamp: stat.mtime.toISOString(),
       size: stat.size,
     };

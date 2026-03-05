@@ -146,6 +146,11 @@ export default function ReportsPanel({ onClose }) {
                         <span className="font-medium text-sm">{domain}</span>
                         <span className="text-xs text-gray-400 ml-2">{formatSize(report.size)}</span>
                       </div>
+                      {report.summary && (
+                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 truncate">
+                          {report.summary}
+                        </p>
+                      )}
                       <div className="text-xs text-gray-500 mt-1">
                         {formatDate(report.timestamp)}
                       </div>

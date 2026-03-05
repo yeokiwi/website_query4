@@ -22,6 +22,10 @@ export default function App() {
   const [currentDate, setCurrentDate] = useState(getTodayString);
   const { messages, isLoading, sendMessage, clearChat } = useChat();
 
+  // Lifted batch state so it persists across panel switches
+  const [batchStatuses, setBatchStatuses] = useState({});
+  const [batchResult, setBatchResult] = useState(null);
+
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode);
     saveTheme(darkMode ? 'dark' : 'light');
@@ -45,6 +49,11 @@ Please distinguish between what you can confirm as recent vs. what appears to be
     sendMessage(prompt);
   };
 
+  const goHome = () => {
+    setShowBatch(false);
+    setShowReports(false);
+  };
+
   const isDisabled = isLoading || batchRunning;
 
   return (
@@ -52,10 +61,13 @@ Please distinguish between what you can confirm as recent vs. what appears to be
       <Header
         darkMode={darkMode}
         onToggleDark={() => setDarkMode((d) => !d)}
-        onBatchMonitor={() => { setShowBatch(true); setShowReports(false); }}
-        onReports={() => { setShowReports(true); setShowBatch(false); }}
+        onBatchMonitor={() => { setShowBatch((v) => !v); setShowReports(false); }}
+        onReports={() => { setShowReports((v) => !v); setShowBatch(false); }}
         onClearChat={clearChat}
+        onHome={goHome}
         providerInfo={providerInfo}
+        showBatch={showBatch}
+        showReports={showReports}
       />
 
       {showBatch && (
@@ -65,6 +77,10 @@ Please distinguish between what you can confirm as recent vs. what appears to be
           setBatchRunning={setBatchRunning}
           currentDate={currentDate}
           onDateChange={setCurrentDate}
+          batchStatuses={batchStatuses}
+          setBatchStatuses={setBatchStatuses}
+          batchResult={batchResult}
+          setBatchResult={setBatchResult}
         />
       )}
 
