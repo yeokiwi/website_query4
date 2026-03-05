@@ -7,5 +7,7 @@ export function formatTime(date) {
 export function formatDate(date) {
   if (!date) return '';
   const d = typeof date === 'string' ? new Date(date) : date;
-  return d.toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' });
+  const datePart = d.toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' });
+  const timePart = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  return `${datePart} ${timePart}`;
 }

@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { loadMessages, saveMessages, clearMessages } from '../utils/storage';
+import { loadMessages, saveMessages, clearMessages, loadToken } from '../utils/storage';
 
 export function useChat() {
   const [messages, setMessages] = useState(() => loadMessages());
@@ -111,9 +111,12 @@ export function useChat() {
     ]);
 
     try {
+      const token = loadToken();
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
       const response = await fetch('/api/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ messages: apiMessages }),
       });
 

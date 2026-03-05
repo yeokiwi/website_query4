@@ -1,12 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Header from './components/Header';
 import UrlQueryBar from './components/UrlQueryBar';
 import MessageList from './components/MessageList';
 import ChatInput from './components/ChatInput';
 import BatchMonitorPanel from './components/BatchMonitorPanel';
 import ReportsPanel from './components/ReportsPanel';
+import ChangePasswordModal from './components/ChangePasswordModal';
+import LoginPage from './components/LoginPage';
 import { useChat } from './hooks/useChat';
-import { loadTheme, saveTheme } from './utils/storage';
+import { loadTheme, saveTheme, loadToken, saveToken, clearToken } from './utils/storage';
+import { setAuthFailureHandler } from './utils/authFetch';
 
 function getTodayString() {
   const d = new Date();
@@ -20,7 +23,50 @@ export default function App() {
   const [batchRunning, setBatchRunning] = useState(false);
   const [providerInfo, setProviderInfo] = useState(null);
   const [currentDate, setCurrentDate] = useState(getTodayString);
+  const [authenticated, setAuthenticated] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
   const { messages, isLoading, sendMessage, clearChat } = useChat();
+
+  const handleLogout = useCallback(() => {
+    const token = loadToken();
+    if (token) {
+      fetch('/api/logout', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+      }).catch(() => {});
+    }
+    clearToken();
+    setAuthenticated(false);
+  }, []);
+
+  // Register global auth failure handler
+  useEffect(() => {
+    setAuthFailureHandler(() => {
+      setAuthenticated(false);
+    });
+  }, []);
+
+  // Check existing token on mount
+  useEffect(() => {
+    const token = loadToken();
+    if (!token) {
+      setAuthChecked(true);
+      return;
+    }
+    fetch('/api/auth/check', {
+      headers: { 'Authorization': `Bearer ${token}` },
+    })
+      .then((r) => {
+        if (r.ok) {
+          setAuthenticated(true);
+        } else {
+          clearToken();
+        }
+      })
+      .catch(() => clearToken())
+      .finally(() => setAuthChecked(true));
+  }, []);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode);
@@ -28,11 +74,25 @@ export default function App() {
   }, [darkMode]);
 
   useEffect(() => {
-    fetch('/api/config')
+    if (!authenticated) return;
+    const token = loadToken();
+    fetch('/api/config', {
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+    })
       .then((r) => r.json())
       .then(setProviderInfo)
       .catch(() => {});
-  }, []);
+  }, [authenticated]);
+
+  const handleLogin = (token) => {
+    saveToken(token);
+    setAuthenticated(true);
+  };
+
+  const goHome = () => {
+    setShowBatch(false);
+    setShowReports(false);
+  };
 
   const handleUrlQuery = (url) => {
     const dateLine = currentDate ? `The current date is ${currentDate}. ` : '';
@@ -45,6 +105,14 @@ Please distinguish between what you can confirm as recent vs. what appears to be
     sendMessage(prompt);
   };
 
+  if (!authChecked) {
+    return <div className="min-h-screen bg-gray-50 dark:bg-gray-900" />;
+  }
+
+  if (!authenticated) {
+    return <LoginPage onLogin={handleLogin} />;
+  }
+
   const isDisabled = isLoading || batchRunning;
 
   return (
@@ -55,7 +123,12 @@ Please distinguish between what you can confirm as recent vs. what appears to be
         onBatchMonitor={() => { setShowBatch(true); setShowReports(false); }}
         onReports={() => { setShowReports(true); setShowBatch(false); }}
         onClearChat={clearChat}
+        onHome={goHome}
+        onLogout={handleLogout}
+        onChangePassword={() => setShowChangePassword(true)}
         providerInfo={providerInfo}
+        showBatch={showBatch}
+        showReports={showReports}
       />
 
       {showBatch && (
@@ -70,6 +143,10 @@ Please distinguish between what you can confirm as recent vs. what appears to be
 
       {showReports && (
         <ReportsPanel onClose={() => setShowReports(false)} />
+      )}
+
+      {showChangePassword && (
+        <ChangePasswordModal onClose={() => setShowChangePassword(false)} />
       )}
 
       {!showBatch && !showReports && (

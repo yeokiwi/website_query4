@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import WebsiteListEditor from './WebsiteListEditor';
+import { authFetch } from '../utils/authFetch';
+import { loadToken } from '../utils/storage';
 
 export default function BatchMonitorPanel({ onClose, batchRunning, setBatchRunning, currentDate, onDateChange }) {
   const [urls, setUrls] = useState([]);
@@ -11,7 +13,7 @@ export default function BatchMonitorPanel({ onClose, batchRunning, setBatchRunni
   const fetchUrls = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/batch-monitor/websites');
+      const res = await authFetch('/api/batch-monitor/websites');
       const data = await res.json();
       setUrls(data.urls || []);
     } catch {
@@ -34,9 +36,12 @@ export default function BatchMonitorPanel({ onClose, batchRunning, setBatchRunni
     setStatuses(initialStatuses);
 
     try {
+      const token = loadToken();
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
       const response = await fetch('/api/batch-monitor', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ currentDate }),
       });
 

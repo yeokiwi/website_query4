@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { formatDate } from '../utils/formatTime';
+import { authFetch } from '../utils/authFetch';
 
 export default function ReportsPanel({ onClose }) {
   const [reports, setReports] = useState([]);
@@ -13,7 +14,7 @@ export default function ReportsPanel({ onClose }) {
   const fetchReports = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/reports');
+      const res = await authFetch('/api/reports');
       const data = await res.json();
       setReports(data.reports || []);
     } catch {
@@ -29,7 +30,7 @@ export default function ReportsPanel({ onClose }) {
   const viewReport = async (filename) => {
     setSelectedReport(filename);
     try {
-      const res = await fetch(`/api/reports/${filename}`);
+      const res = await authFetch(`/api/reports/${filename}`);
       const text = await res.text();
       setReportContent(text);
     } catch {
@@ -42,7 +43,7 @@ export default function ReportsPanel({ onClose }) {
     if (!confirm(`Delete report "${filename}"?`)) return;
     setDeleting(true);
     try {
-      await fetch(`/api/reports/${filename}`, { method: 'DELETE' });
+      await authFetch(`/api/reports/${filename}`, { method: 'DELETE' });
       if (selectedReport === filename) {
         setSelectedReport(null);
         setReportContent('');
@@ -58,7 +59,7 @@ export default function ReportsPanel({ onClose }) {
     if (!confirm(`Delete all ${reports.length} reports?`)) return;
     setDeleting(true);
     try {
-      await fetch('/api/reports', { method: 'DELETE' });
+      await authFetch('/api/reports', { method: 'DELETE' });
       setSelectedReport(null);
       setReportContent('');
       await fetchReports();
@@ -66,6 +67,25 @@ export default function ReportsPanel({ onClose }) {
       // ignore
     }
     setDeleting(false);
+  };
+
+  const exportToPdf = () => {
+    const content = document.querySelector('.markdown-content');
+    if (!content) return;
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`<!DOCTYPE html><html><head><title>${selectedReport}</title><style>
+      body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; color: #333; font-size: 14px; line-height: 1.6; }
+      h1, h2, h3 { margin-top: 1.5em; }
+      table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+      th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+      th { background: #f5f5f5; }
+      code { background: #f5f5f5; padding: 2px 4px; border-radius: 3px; font-size: 13px; }
+      pre { background: #f5f5f5; padding: 12px; border-radius: 6px; overflow-x: auto; }
+      pre code { background: none; padding: 0; }
+      @media print { body { padding: 0; } }
+    </style></head><body>${content.innerHTML}</body></html>`);
+    printWindow.document.close();
+    printWindow.onload = () => { printWindow.print(); };
   };
 
   const formatSize = (bytes) => {
@@ -99,13 +119,21 @@ export default function ReportsPanel({ onClose }) {
               </button>
             )}
             {selectedReport && (
-              <button
-                onClick={(e) => deleteReport(selectedReport, e)}
-                disabled={deleting}
-                className="px-3 py-1.5 text-sm rounded-lg bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 font-medium disabled:opacity-50"
-              >
-                Delete
-              </button>
+              <>
+                <button
+                  onClick={exportToPdf}
+                  className="px-3 py-1.5 text-sm rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 font-medium"
+                >
+                  Export PDF
+                </button>
+                <button
+                  onClick={(e) => deleteReport(selectedReport, e)}
+                  disabled={deleting}
+                  className="px-3 py-1.5 text-sm rounded-lg bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 font-medium disabled:opacity-50"
+                >
+                  Delete
+                </button>
+              </>
             )}
             <button
               onClick={onClose}

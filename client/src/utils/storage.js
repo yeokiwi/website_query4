@@ -37,3 +37,25 @@ export function saveTheme(theme) {
     // ignore
   }
 }
+
+const TOKEN_KEY = 'website-monitor-token';
+
+export function loadToken() {
+  try {
+    return localStorage.getItem(TOKEN_KEY) || null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveToken(token) {
+  try {
+    localStorage.setItem(TOKEN_KEY, token);
+  } catch {
+    // ignore
+  }
+}
+
+export function clearToken() {
+  localStorage.removeItem(TOKEN_KEY);
+}
