@@ -127,15 +127,22 @@ export default function WebsiteListEditor({ onClose, disabled }) {
       });
 
       if (!res.ok) {
-        const data = await res.json();
-        if (data.invalidUrls) {
-          const serverErrors = {};
-          data.invalidUrls.forEach((inv) => {
-            const idx = cleaned.indexOf(inv.url);
-            if (idx >= 0) serverErrors[idx] = inv.error;
-          });
-          setErrors(serverErrors);
-          setRows(cleanedRows.map((r) => ({ url: r.url, prompt: r.prompt, showPrompt: !!r.prompt })));
+        const contentType = res.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          const data = await res.json();
+          if (data.invalidUrls) {
+            const serverErrors = {};
+            data.invalidUrls.forEach((inv) => {
+              const idx = cleaned.indexOf(inv.url);
+              if (idx >= 0) serverErrors[idx] = inv.error;
+            });
+            setErrors(serverErrors);
+            setRows(cleanedRows.map((r) => ({ url: r.url, prompt: r.prompt, showPrompt: !!r.prompt })));
+          } else {
+            setErrors({ _general: data.error || 'Save failed' });
+          }
+        } else {
+          setErrors({ _general: `Server error (${res.status})` });
         }
       } else {
         onClose();

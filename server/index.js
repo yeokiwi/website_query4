@@ -548,7 +548,8 @@ app.get('/api/config', (req, res) => {
 // ── SPA fallback ─────────────────────────────────────────
 
 if (fs.existsSync(clientDist)) {
-  app.get('*', (req, res) => {
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api/')) return next();
     res.sendFile(path.join(clientDist, 'index.html'));
   });
 }
