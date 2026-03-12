@@ -248,21 +248,6 @@ export default function BatchMonitorPanel({
                       className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-50 flex-shrink-0"
                     />
                     <span className="text-sm truncate flex-1">{url}</span>
-                    {status && (
-                      <span
-                        className={`text-xs font-medium flex-shrink-0 ${
-                          status === 'pending'
-                            ? 'text-gray-400'
-                            : status === 'monitoring'
-                              ? 'text-yellow-500'
-                              : status === 'done'
-                                ? 'text-green-500'
-                                : 'text-red-500'
-                        }`}
-                      >
-                        {status === 'monitoring' ? 'monitoring...' : status}
-                      </span>
-                    )}
                   </li>
                 );
               })}
