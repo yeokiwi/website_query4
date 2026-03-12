@@ -11,6 +11,7 @@ import { fetchUrl, isBlockedUrl } from './services/fetchUrlService.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.resolve(__dirname, '..');
 const WEBSITE_FILE = path.resolve(process.env.WEBSITE_FILE || path.join(PROJECT_ROOT, 'website.md'));
+const PROMPTS_FILE = path.resolve(process.env.PROMPTS_FILE || path.join(PROJECT_ROOT, 'website-prompts.json'));
 const REPORTS_DIR = path.resolve(process.env.REPORTS_DIR || path.join(PROJECT_ROOT, 'reports'));
 const MAX_TOOL_CALLS = parseInt(process.env.MAX_TOOL_CALLS_PER_TURN || '10', 10);
 const PORT = parseInt(process.env.PORT || '3001', 10);
@@ -47,6 +48,19 @@ function writeWebsiteFile(urls) {
   fs.writeFileSync(WEBSITE_FILE, content, 'utf-8');
 }
 
+function readPromptsFile() {
+  if (!fs.existsSync(PROMPTS_FILE)) return {};
+  try {
+    return JSON.parse(fs.readFileSync(PROMPTS_FILE, 'utf-8'));
+  } catch {
+    return {};
+  }
+}
+
+function writePromptsFile(prompts) {
+  fs.writeFileSync(PROMPTS_FILE, JSON.stringify(prompts, null, 2), 'utf-8');
+}
+
 function validateUrl(urlString) {
   try {
     const parsed = new URL(urlString);
@@ -74,14 +88,22 @@ function sseWrite(res, event, data) {
   res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
 }
 
-function getPromptForUrl(url, currentDate) {
-  const dateLine = currentDate ? `The current date is ${currentDate}. ` : '';
-  return `${dateLine}I need you to examine ${url} and focus specifically on:
+const DEFAULT_PROMPT_TEMPLATE = `I need you to examine [url] and focus specifically on:
 - What's new or changed in the last 30 days?
 - Any announcements, blog posts, or news from the past month
 - Updates to products, services, or features
 - Changes to pricing, terms of service, or policies
 Please distinguish between what you can confirm as recent vs. what appears to be recent based on dates or context.`;
+
+function getPromptForUrl(url, currentDate, customPrompt) {
+  const template = customPrompt || DEFAULT_PROMPT_TEMPLATE;
+  const dateLine = currentDate ? `The current date is ${currentDate}. ` : '';
+  const resolved = template.replace(/\[url\]/gi, url).replace(/\[date\]/gi, currentDate || 'unknown');
+  // If the template already contains a date placeholder that was replaced, don't prepend dateLine
+  if (customPrompt && /\[date\]/i.test(customPrompt)) {
+    return resolved;
+  }
+  return `${dateLine}${resolved}`;
 }
 
 function generateReportFilename(url) {
@@ -232,13 +254,14 @@ app.post('/api/chat', async (req, res) => {
 
 app.get('/api/batch-monitor/websites', (req, res) => {
   const urls = readWebsiteFile();
-  res.json({ urls });
+  const prompts = readPromptsFile();
+  res.json({ urls, prompts });
 });
 
 // ── PUT /api/batch-monitor/websites ──────────────────────
 
 app.put('/api/batch-monitor/websites', (req, res) => {
-  const { urls } = req.body;
+  const { urls, prompts } = req.body;
   if (!urls || !Array.isArray(urls)) {
     return res.status(400).json({ error: 'urls array is required' });
   }
@@ -254,7 +277,20 @@ app.put('/api/batch-monitor/websites', (req, res) => {
   }
 
   writeWebsiteFile(urls);
-  res.json({ urls });
+
+  // Save custom prompts (only store non-empty ones)
+  if (prompts && typeof prompts === 'object') {
+    const cleaned = {};
+    for (const [url, prompt] of Object.entries(prompts)) {
+      if (typeof prompt === 'string' && prompt.trim()) {
+        cleaned[url] = prompt.trim();
+      }
+    }
+    writePromptsFile(cleaned);
+  }
+
+  const savedPrompts = readPromptsFile();
+  res.json({ urls, prompts: savedPrompts });
 });
 
 // ── POST /api/batch-monitor/websites ─────────────────────
@@ -302,6 +338,7 @@ app.post('/api/batch-monitor', async (req, res) => {
   }
 
   const { currentDate } = req.body || {};
+  const customPrompts = readPromptsFile();
 
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
@@ -318,7 +355,7 @@ app.post('/api/batch-monitor', async (req, res) => {
     const url = urls[i];
     sseWrite(res, 'batch_item_start', { index: i, url });
 
-    const prompt = getPromptForUrl(url, currentDate);
+    const prompt = getPromptForUrl(url, currentDate, customPrompts[url]);
     const messages = [{ role: 'user', content: prompt }];
     const filename = generateReportFilename(url);
 
@@ -449,7 +486,7 @@ app.delete('/api/reports', (req, res) => {
 // ── GET /api/config ──────────────────────────────────────
 
 app.get('/api/config', (req, res) => {
-  res.json(getProviderInfo());
+  res.json({ ...getProviderInfo(), defaultPromptTemplate: DEFAULT_PROMPT_TEMPLATE });
 });
 
 // ── GET /api/health ──────────────────────────────────────
