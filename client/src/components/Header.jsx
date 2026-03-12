@@ -11,9 +11,9 @@ export default function Header({ darkMode, onToggleDark, onBatchMonitor, onRepor
     <header className="flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm flex-wrap gap-2">
       <div className="flex items-center gap-2 flex-wrap">
         <button onClick={onHome} className="text-lg font-bold text-gray-800 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-          LLM Chat
+          Website Monitor
         </button>
-        <span className="text-sm text-gray-500 dark:text-gray-400">/ with web browsing</span>
+        <span className="text-sm text-gray-500 dark:text-gray-400">/ with batching capability</span>
         {providerLabel && (
           <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${providerColor}`}>
             {providerLabel}
