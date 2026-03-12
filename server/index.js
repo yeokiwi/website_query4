@@ -88,22 +88,16 @@ function sseWrite(res, event, data) {
   res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
 }
 
-const DEFAULT_PROMPT_TEMPLATE = `I need you to examine [url] and focus specifically on:
-- What's new or changed in the last 30 days?
+const DEFAULT_PROMPT_BODY = `- What's new or changed in the last 60 days?
 - Any announcements, blog posts, or news from the past month
 - Updates to products, services, or features
 - Changes to pricing, terms of service, or policies
 Please distinguish between what you can confirm as recent vs. what appears to be recent based on dates or context.`;
 
-function getPromptForUrl(url, currentDate, customPrompt) {
-  const template = customPrompt || DEFAULT_PROMPT_TEMPLATE;
-  const dateLine = currentDate ? `The current date is ${currentDate}. ` : '';
-  const resolved = template.replace(/\[url\]/gi, url).replace(/\[date\]/gi, currentDate || 'unknown');
-  // If the template already contains a date placeholder that was replaced, don't prepend dateLine
-  if (customPrompt && /\[date\]/i.test(customPrompt)) {
-    return resolved;
-  }
-  return `${dateLine}${resolved}`;
+function getPromptForUrl(url, currentDate, customPromptBody) {
+  const prefix = `The current date is ${currentDate || 'unknown'}. I need you to examine ${url}:`;
+  const body = (customPromptBody && customPromptBody.trim()) || DEFAULT_PROMPT_BODY;
+  return `${prefix}\n${body}`;
 }
 
 function generateReportFilename(url) {
@@ -332,13 +326,22 @@ app.delete('/api/batch-monitor/websites', (req, res) => {
 // ── POST /api/batch-monitor ──────────────────────────────
 
 app.post('/api/batch-monitor', async (req, res) => {
-  const urls = readWebsiteFile();
-  if (urls.length === 0) {
+  const allUrls = readWebsiteFile();
+  if (allUrls.length === 0) {
     return res.status(400).json({ error: 'No URLs in website.md' });
   }
 
-  const { currentDate } = req.body || {};
+  const { currentDate, selectedUrls } = req.body || {};
   const customPrompts = readPromptsFile();
+
+  // If selectedUrls provided, only run those; otherwise run all
+  const urls = Array.isArray(selectedUrls) && selectedUrls.length > 0
+    ? allUrls.filter((u) => selectedUrls.includes(u))
+    : allUrls;
+
+  if (urls.length === 0) {
+    return res.status(400).json({ error: 'No matching URLs selected' });
+  }
 
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
@@ -486,7 +489,7 @@ app.delete('/api/reports', (req, res) => {
 // ── GET /api/config ──────────────────────────────────────
 
 app.get('/api/config', (req, res) => {
-  res.json({ ...getProviderInfo(), defaultPromptTemplate: DEFAULT_PROMPT_TEMPLATE });
+  res.json({ ...getProviderInfo(), defaultPromptBody: DEFAULT_PROMPT_BODY });
 });
 
 // ── GET /api/health ──────────────────────────────────────

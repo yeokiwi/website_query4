@@ -15,15 +15,19 @@ export default function BatchMonitorPanel({
   const [urls, setUrls] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showEditor, setShowEditor] = useState(false);
+  const [selected, setSelected] = useState(new Set());
 
   const fetchUrls = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch('/api/batch-monitor/websites');
       const data = await res.json();
-      setUrls(data.urls || []);
+      const fetched = data.urls || [];
+      setUrls(fetched);
+      setSelected(new Set(fetched));
     } catch {
       setUrls([]);
+      setSelected(new Set());
     }
     setLoading(false);
   }, []);
@@ -32,20 +36,38 @@ export default function BatchMonitorPanel({
     fetchUrls();
   }, [fetchUrls]);
 
-  const handleRunAll = async () => {
-    if (urls.length === 0) return;
+  const toggleSelect = (url) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(url)) next.delete(url);
+      else next.add(url);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    if (selected.size === urls.length) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(urls));
+    }
+  };
+
+  const handleRunSelected = async () => {
+    const selectedUrls = urls.filter((u) => selected.has(u));
+    if (selectedUrls.length === 0) return;
     setBatchRunning(true);
     setBatchResult(null);
 
     const initialStatuses = {};
-    urls.forEach((url, i) => { initialStatuses[i] = 'pending'; });
+    selectedUrls.forEach((url, i) => { initialStatuses[i] = 'pending'; });
     setBatchStatuses(initialStatuses);
 
     try {
       const response = await fetch('/api/batch-monitor', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ currentDate }),
+        body: JSON.stringify({ currentDate, selectedUrls }),
       });
 
       const reader = response.body.getReader();
@@ -103,6 +125,9 @@ export default function BatchMonitorPanel({
     );
   }
 
+  const allSelected = urls.length > 0 && selected.size === urls.length;
+  const someSelected = selected.size > 0 && selected.size < urls.length;
+
   return (
     <div className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900">
       <div className="max-w-2xl mx-auto p-4">
@@ -136,11 +161,11 @@ export default function BatchMonitorPanel({
           <>
             <div className="flex items-center gap-2 mb-4 flex-wrap">
               <button
-                onClick={handleRunAll}
-                disabled={batchRunning}
+                onClick={handleRunSelected}
+                disabled={batchRunning || selected.size === 0}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm font-medium"
               >
-                {batchRunning ? 'Running...' : 'Run All'}
+                {batchRunning ? 'Running...' : `Run Selected (${selected.size})`}
               </button>
               <button
                 onClick={() => setShowEditor(true)}
@@ -187,15 +212,42 @@ export default function BatchMonitorPanel({
               </div>
             )}
 
+            {/* Select all checkbox */}
+            <div className="flex items-center gap-2 mb-2 px-3">
+              <input
+                type="checkbox"
+                checked={allSelected}
+                ref={(el) => { if (el) el.indeterminate = someSelected; }}
+                onChange={toggleAll}
+                disabled={batchRunning}
+                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-50"
+              />
+              <span className="text-xs text-gray-500">
+                {allSelected ? 'Deselect all' : 'Select all'}
+              </span>
+            </div>
+
             <ul className="space-y-2">
               {urls.map((url, i) => {
                 const status = batchStatuses[i];
+                const isSelected = selected.has(url);
                 return (
                   <li
                     key={i}
-                    className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700"
+                    className={`flex items-center gap-3 p-3 bg-white dark:bg-gray-800 rounded-lg border ${
+                      isSelected
+                        ? 'border-blue-300 dark:border-blue-600'
+                        : 'border-gray-200 dark:border-gray-700'
+                    }`}
                   >
-                    <span className="text-sm truncate mr-2">{url}</span>
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => toggleSelect(url)}
+                      disabled={batchRunning}
+                      className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-50 flex-shrink-0"
+                    />
+                    <span className="text-sm truncate flex-1">{url}</span>
                     {status && (
                       <span
                         className={`text-xs font-medium flex-shrink-0 ${

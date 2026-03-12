@@ -5,7 +5,7 @@ export default function WebsiteListEditor({ onClose, disabled }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
-  const [defaultPromptTemplate, setDefaultPromptTemplate] = useState('');
+  const [defaultPromptBody, setDefaultPromptBody] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -18,7 +18,7 @@ export default function WebsiteListEditor({ onClose, disabled }) {
         const config = await configRes.json();
         const urls = data.urls || [];
         const prompts = data.prompts || {};
-        setDefaultPromptTemplate(config.defaultPromptTemplate || '');
+        setDefaultPromptBody(config.defaultPromptBody || '');
         setRows(
           urls.length > 0
             ? urls.map((u) => ({ url: u, prompt: prompts[u] || '', showPrompt: !!prompts[u] }))
@@ -244,16 +244,19 @@ export default function WebsiteListEditor({ onClose, disabled }) {
               </div>
               {row.showPrompt && (
                 <div className="ml-9 mr-9">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1 italic">
+                    &quot;The current date is [date]. I need you to examine [url]:&quot;
+                  </p>
                   <textarea
                     value={row.prompt}
                     onChange={(e) => updateRow(i, 'prompt', e.target.value)}
-                    placeholder={defaultPromptTemplate || 'Enter custom prompt... Use [url] and [date] as placeholders.'}
+                    placeholder={defaultPromptBody || 'Enter custom prompt body...'}
                     disabled={disabled}
                     rows={4}
                     className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 text-gray-800 dark:text-gray-200 resize-y"
                   />
                   <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                    Optional. Use <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">[url]</code> and <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">[date]</code> as placeholders. Leave empty to use the default prompt.
+                    Optional. Leave empty to use the default prompt.
                   </p>
                 </div>
               )}

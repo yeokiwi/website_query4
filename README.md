@@ -5,8 +5,8 @@ A responsive single-page web application that monitors websites for recent chang
 ## Features
 
 - **Single URL Query** — Enter a URL, click Request, get a streamed analysis
-- **Batch Monitor** — Load URLs from `website.md`, process all sequentially, save markdown reports
-- **Custom Prompts** — Optionally customise the LLM prompt per website; uses a sensible default when left blank
+- **Batch Monitor** — Load URLs from `website.md`, select which to run, process sequentially, save markdown reports
+- **Custom Prompts** — Optionally customise the LLM prompt body per website; the date and URL prefix is auto-generated
 - **Website List Editor** — Manage monitored URLs and their custom prompts directly from the UI
 - **Reports** — View, read, and delete generated change reports with markdown rendering
 - **Chat** — Freeform conversation with web-browsing AI assistant
@@ -49,19 +49,22 @@ The backend runs an autonomous tool-use loop for each query:
 
 ### Custom Prompts
 
-Each website in the batch list can have an optional custom LLM prompt. Custom prompts are stored in `website-prompts.json` (separate from the URL list in `website.md`). The prompt template supports two placeholders:
+The LLM prompt is split into two parts:
 
-- `[url]` — replaced with the website URL
-- `[date]` — replaced with the current date
+1. **Auto-generated prefix** (not editable): `"The current date is [date]. I need you to examine [url]:"`
+2. **Customisable body** (editable per URL): the instructions that follow the prefix
 
-When no custom prompt is set for a URL, the default prompt is used:
+Custom prompt bodies are stored in `website-prompts.json` (separate from the URL list in `website.md`). When no custom body is set for a URL, the default body is used:
 
-> The current date is [date]. I need you to examine [url] and focus specifically on:
-> - What's new or changed in the last 30 days?
+> - What's new or changed in the last 60 days?
 > - Any announcements, blog posts, or news from the past month
 > - Updates to products, services, or features
 > - Changes to pricing, terms of service, or policies
 > Please distinguish between what you can confirm as recent vs. what appears to be recent based on dates or context.
+
+### Selective Batch Execution
+
+In the Batch Monitor panel, each URL has a checkbox. Users can select which URLs to include when clicking "Run Selected". All URLs are selected by default. A "Select all / Deselect all" checkbox is provided at the top of the list.
 
 ### Data Storage
 
