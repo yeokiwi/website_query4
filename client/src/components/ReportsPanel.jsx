@@ -69,6 +69,36 @@ export default function ReportsPanel({ onClose }) {
     setDeleting(false);
   };
 
+  const exportPdf = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const contentEl = document.getElementById('report-content');
+    if (!contentEl) return;
+
+    printWindow.document.write(`<!DOCTYPE html>
+<html><head><title>${selectedReport}</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 800px; margin: 0 auto; padding: 40px 20px; color: #1a1a1a; font-size: 14px; line-height: 1.6; }
+  h1 { font-size: 22px; border-bottom: 1px solid #ddd; padding-bottom: 8px; }
+  h2 { font-size: 18px; margin-top: 24px; }
+  h3 { font-size: 15px; margin-top: 20px; }
+  pre { background: #f5f5f5; padding: 12px; border-radius: 4px; overflow-x: auto; font-size: 13px; }
+  code { background: #f5f5f5; padding: 2px 4px; border-radius: 3px; font-size: 13px; }
+  pre code { background: none; padding: 0; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+  th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 13px; }
+  th { background: #f5f5f5; }
+  blockquote { border-left: 3px solid #ddd; margin: 12px 0; padding: 4px 16px; color: #555; }
+  a { color: #2563eb; }
+  ul, ol { padding-left: 24px; }
+  hr { border: none; border-top: 1px solid #ddd; margin: 20px 0; }
+</style></head><body>${contentEl.innerHTML}</body></html>`);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+  };
+
   const formatSize = (bytes) => {
     if (bytes < 1024) return `${bytes} B`;
     return `${(bytes / 1024).toFixed(1)} KB`;
@@ -100,13 +130,21 @@ export default function ReportsPanel({ onClose }) {
               </button>
             )}
             {selectedReport && (
-              <button
-                onClick={(e) => deleteReport(selectedReport, e)}
-                disabled={deleting}
-                className="px-3 py-1.5 text-sm rounded-lg bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 font-medium disabled:opacity-50"
-              >
-                Delete
-              </button>
+              <>
+                <button
+                  onClick={exportPdf}
+                  className="px-3 py-1.5 text-sm rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 font-medium"
+                >
+                  Export PDF
+                </button>
+                <button
+                  onClick={(e) => deleteReport(selectedReport, e)}
+                  disabled={deleting}
+                  className="px-3 py-1.5 text-sm rounded-lg bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 font-medium disabled:opacity-50"
+                >
+                  Delete
+                </button>
+              </>
             )}
             <button
               onClick={onClose}
@@ -121,7 +159,7 @@ export default function ReportsPanel({ onClose }) {
 
         {selectedReport ? (
           <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-            <div className="markdown-content text-sm">
+            <div id="report-content" className="markdown-content text-sm">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
                 {reportContent}
               </ReactMarkdown>

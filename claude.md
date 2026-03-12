@@ -436,6 +436,7 @@ An inline editor panel for managing the URLs in `website.md` without leaving the
 - Each entry shows: domain, summary preview, date, file size
 - Clicking an entry renders the report as markdown
 - Delete individual reports or delete all
+- "Export PDF" button when viewing a report — opens a print-ready window with styled report content for saving as PDF via the browser's print dialog
 - Back navigation to report list from report view
 
 #### Empty State
