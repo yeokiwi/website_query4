@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { formatDate } from '../utils/formatTime';
+import { apiFetch } from '../utils/api';
 
 export default function ReportsPanel({ onClose }) {
   const [reports, setReports] = useState([]);
@@ -13,7 +14,7 @@ export default function ReportsPanel({ onClose }) {
   const fetchReports = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/reports');
+      const res = await apiFetch('/api/reports');
       const data = await res.json();
       setReports(data.reports || []);
     } catch {
@@ -58,7 +59,7 @@ export default function ReportsPanel({ onClose }) {
     if (!confirm(`Delete all ${reports.length} reports?`)) return;
     setDeleting(true);
     try {
-      await fetch('/api/reports', { method: 'DELETE' });
+      await apiFetch('/api/reports', { method: 'DELETE' });
       setSelectedReport(null);
       setReportContent('');
       await fetchReports();

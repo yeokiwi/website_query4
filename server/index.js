@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url';
 import { createMessage, getProviderInfo } from './services/llmService.js';
 import { webSearch } from './services/webSearchService.js';
 import { fetchUrl, isBlockedUrl } from './services/fetchUrlService.js';
+import { login, logout, changeCredentials, authMiddleware } from './services/authService.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.resolve(__dirname, '..');
@@ -31,6 +32,58 @@ if (fs.existsSync(clientDist)) {
 if (!fs.existsSync(REPORTS_DIR)) {
   fs.mkdirSync(REPORTS_DIR, { recursive: true });
 }
+
+// ── Auth routes (public) ─────────────────────────────────
+
+app.post('/api/auth/login', (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) {
+    return res.status(400).json({ error: 'Username and password are required' });
+  }
+  const token = login(username, password);
+  if (!token) {
+    return res.status(401).json({ error: 'Invalid username or password' });
+  }
+  res.json({ token });
+});
+
+app.post('/api/auth/logout', (req, res) => {
+  const authHeader = req.headers.authorization;
+  const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  if (token) logout(token);
+  res.json({ success: true });
+});
+
+app.post('/api/auth/change-credentials', authMiddleware, (req, res) => {
+  const authHeader = req.headers.authorization;
+  const token = authHeader.slice(7);
+  const { newUsername, newPassword, currentPassword } = req.body;
+  if (!currentPassword) {
+    return res.status(400).json({ error: 'Current password is required' });
+  }
+  if (!newUsername && !newPassword) {
+    return res.status(400).json({ error: 'Provide a new username or new password' });
+  }
+  const result = changeCredentials(token, { newUsername, newPassword, currentPassword });
+  if (result.error) {
+    return res.status(400).json({ error: result.error });
+  }
+  res.json({ success: true });
+});
+
+app.get('/api/auth/verify', authMiddleware, (req, res) => {
+  res.json({ valid: true });
+});
+
+// ── GET /api/health (public) ─────────────────────────────
+
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// ── Auth middleware for all other /api routes ─────────────
+
+app.use('/api', authMiddleware);
 
 // ── Helpers ──────────────────────────────────────────────
 
@@ -490,12 +543,6 @@ app.delete('/api/reports', (req, res) => {
 
 app.get('/api/config', (req, res) => {
   res.json({ ...getProviderInfo(), defaultPromptBody: DEFAULT_PROMPT_BODY });
-});
-
-// ── GET /api/health ──────────────────────────────────────
-
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 // ── SPA fallback ─────────────────────────────────────────

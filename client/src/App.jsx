@@ -5,8 +5,11 @@ import MessageList from './components/MessageList';
 import ChatInput from './components/ChatInput';
 import BatchMonitorPanel from './components/BatchMonitorPanel';
 import ReportsPanel from './components/ReportsPanel';
+import LoginPage from './components/LoginPage';
+import ChangeCredentials from './components/ChangeCredentials';
 import { useChat } from './hooks/useChat';
 import { loadTheme, saveTheme } from './utils/storage';
+import { getToken, setToken, clearToken, apiFetch } from './utils/api';
 
 function getTodayString() {
   const d = new Date();
@@ -22,9 +25,32 @@ export default function App() {
   const [currentDate, setCurrentDate] = useState(getTodayString);
   const { messages, isLoading, sendMessage, clearChat } = useChat();
 
+  // Auth state
+  const [authenticated, setAuthenticated] = useState(false);
+  const [authChecking, setAuthChecking] = useState(true);
+  const [showChangeCredentials, setShowChangeCredentials] = useState(false);
+
   // Lifted batch state so it persists across panel switches
   const [batchStatuses, setBatchStatuses] = useState({});
   const [batchResult, setBatchResult] = useState(null);
+
+  // Check existing token on mount
+  useEffect(() => {
+    const token = getToken();
+    if (!token) {
+      setAuthChecking(false);
+      return;
+    }
+    fetch('/api/auth/verify', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => {
+        if (res.ok) setAuthenticated(true);
+        else clearToken();
+      })
+      .catch(() => clearToken())
+      .finally(() => setAuthChecking(false));
+  }, []);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode);
@@ -32,11 +58,37 @@ export default function App() {
   }, [darkMode]);
 
   useEffect(() => {
-    fetch('/api/config')
+    if (!authenticated) return;
+    apiFetch('/api/config')
       .then((r) => r.json())
       .then(setProviderInfo)
       .catch(() => {});
-  }, []);
+  }, [authenticated]);
+
+  const handleLogin = (token) => {
+    setToken(token);
+    setAuthenticated(true);
+  };
+
+  const handleLogout = async () => {
+    const token = getToken();
+    try {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    } catch {
+      // ignore
+    }
+    clearToken();
+    setAuthenticated(false);
+  };
+
+  const handleCredentialsChanged = () => {
+    setShowChangeCredentials(false);
+    clearToken();
+    setAuthenticated(false);
+  };
 
   const handleUrlQuery = (url) => {
     const dateLine = currentDate ? `The current date is ${currentDate}. ` : '';
@@ -54,6 +106,18 @@ Please distinguish between what you can confirm as recent vs. what appears to be
     setShowReports(false);
   };
 
+  if (authChecking) {
+    return (
+      <div className="h-full flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <p className="text-gray-500">Loading...</p>
+      </div>
+    );
+  }
+
+  if (!authenticated) {
+    return <LoginPage onLogin={handleLogin} />;
+  }
+
   const isDisabled = isLoading || batchRunning;
 
   return (
@@ -68,6 +132,8 @@ Please distinguish between what you can confirm as recent vs. what appears to be
         providerInfo={providerInfo}
         showBatch={showBatch}
         showReports={showReports}
+        onChangeCredentials={() => setShowChangeCredentials(true)}
+        onLogout={handleLogout}
       />
 
       {showBatch && (
@@ -103,6 +169,14 @@ Please distinguish between what you can confirm as recent vs. what appears to be
 
           <ChatInput onSend={sendMessage} disabled={isDisabled} />
         </>
+      )}
+
+      {showChangeCredentials && (
+        <ChangeCredentials
+          token={getToken()}
+          onClose={() => setShowChangeCredentials(false)}
+          onCredentialsChanged={handleCredentialsChanged}
+        />
       )}
     </div>
   );

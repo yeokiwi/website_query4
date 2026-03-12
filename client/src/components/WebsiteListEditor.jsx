@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { apiFetch } from '../utils/api';
 
 export default function WebsiteListEditor({ onClose, disabled }) {
   const [rows, setRows] = useState([]);
@@ -11,8 +12,8 @@ export default function WebsiteListEditor({ onClose, disabled }) {
     (async () => {
       try {
         const [websitesRes, configRes] = await Promise.all([
-          fetch('/api/batch-monitor/websites'),
-          fetch('/api/config'),
+          apiFetch('/api/batch-monitor/websites'),
+          apiFetch('/api/config'),
         ]);
         const data = await websitesRes.json();
         const config = await configRes.json();
@@ -119,7 +120,7 @@ export default function WebsiteListEditor({ onClose, disabled }) {
 
     setSaving(true);
     try {
-      const res = await fetch('/api/batch-monitor/websites', {
+      const res = await apiFetch('/api/batch-monitor/websites', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ urls: cleaned, prompts }),
