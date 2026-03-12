@@ -60,7 +60,7 @@ export default function BatchMonitorPanel({
     setBatchResult(null);
 
     const initialStatuses = {};
-    selectedUrls.forEach((url, i) => { initialStatuses[i] = 'pending'; });
+    selectedUrls.forEach((url) => { initialStatuses[url] = 'pending'; });
     setBatchStatuses(initialStatuses);
 
     try {
@@ -92,11 +92,11 @@ export default function BatchMonitorPanel({
           try { data = JSON.parse(dataMatch[1]); } catch { continue; }
 
           if (event === 'batch_item_start') {
-            setBatchStatuses((prev) => ({ ...prev, [data.index]: 'monitoring' }));
+            setBatchStatuses((prev) => ({ ...prev, [data.url]: 'monitoring' }));
           } else if (event === 'batch_item_done') {
-            setBatchStatuses((prev) => ({ ...prev, [data.index]: 'done' }));
+            setBatchStatuses((prev) => ({ ...prev, [data.url]: 'done' }));
           } else if (event === 'batch_item_error') {
-            setBatchStatuses((prev) => ({ ...prev, [data.index]: 'failed' }));
+            setBatchStatuses((prev) => ({ ...prev, [data.url]: 'failed' }));
           } else if (event === 'batch_done') {
             setBatchResult(data);
           }
@@ -229,7 +229,7 @@ export default function BatchMonitorPanel({
 
             <ul className="space-y-2">
               {urls.map((url, i) => {
-                const status = batchStatuses[i];
+                const status = batchStatuses[url];
                 const isSelected = selected.has(url);
                 return (
                   <li
