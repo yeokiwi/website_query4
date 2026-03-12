@@ -30,7 +30,7 @@ export default function ReportsPanel({ onClose }) {
   const viewReport = async (filename) => {
     setSelectedReport(filename);
     try {
-      const res = await fetch(`/api/reports/${filename}`);
+      const res = await apiFetch(`/api/reports/${filename}`);
       const text = await res.text();
       setReportContent(text);
     } catch {
@@ -43,7 +43,7 @@ export default function ReportsPanel({ onClose }) {
     if (!confirm(`Delete report "${filename}"?`)) return;
     setDeleting(true);
     try {
-      await fetch(`/api/reports/${filename}`, { method: 'DELETE' });
+      await apiFetch(`/api/reports/${filename}`, { method: 'DELETE' });
       if (selectedReport === filename) {
         setSelectedReport(null);
         setReportContent('');
