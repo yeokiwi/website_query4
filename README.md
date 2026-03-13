@@ -107,6 +107,67 @@ npm run dev:client
 
 The frontend dev server runs on port 5173 and proxies API requests to port 3001.
 
+## Deploy to Railway.com
+
+### Option A: One-click deploy
+
+1. Push this repo to GitHub
+2. Go to [Railway Dashboard](https://railway.com/dashboard) and click **New Project > Deploy from GitHub repo**
+3. Select your repository — Railway auto-detects the Node.js runtime and uses `railway.json` for configuration
+4. Railway will run `npm run build` (via Nixpacks) and then `npm start`
+5. In the **Variables** tab of your service, add the required environment variables:
+   - `LLM_PROVIDER` — `anthropic` or `deepseek`
+   - `ANTHROPIC_API_KEY` — your Anthropic API key (if using Anthropic)
+   - `DEEPSEEK_API_KEY` — your DeepSeek API key (if using DeepSeek)
+   - `SEARCH_PROVIDER` — `brave` or `serpapi`
+   - `BRAVE_SEARCH_API_KEY` or `SERPAPI_API_KEY` — your search API key
+   - `NODE_ENV` — `production`
+6. Railway automatically assigns a `PORT` environment variable — the app reads it at startup, so no manual port configuration is needed
+7. Click **Settings > Networking > Generate Domain** to get a public URL
+
+### Option B: Deploy with Railway CLI
+
+1. Install the Railway CLI:
+   ```bash
+   npm install -g @railway/cli
+   ```
+2. Authenticate and link your project:
+   ```bash
+   railway login
+   railway init
+   ```
+3. Set the required environment variables:
+   ```bash
+   railway variables set LLM_PROVIDER=anthropic
+   railway variables set ANTHROPIC_API_KEY=your_key_here
+   railway variables set SEARCH_PROVIDER=brave
+   railway variables set BRAVE_SEARCH_API_KEY=your_key_here
+   railway variables set NODE_ENV=production
+   ```
+4. Deploy:
+   ```bash
+   railway up
+   ```
+5. Generate a public domain:
+   ```bash
+   railway domain
+   ```
+
+### Adding persistent storage (Volume)
+
+By default, file-system data (reports, website list, custom prompts) is lost on each redeploy. To persist data, attach a Railway **Volume**:
+
+1. In the Railway dashboard, select your service and click **+ New > Volume**
+2. Set the mount path to `/data`
+3. Add these environment variables so the app writes to the volume:
+   ```
+   REPORTS_DIR=/data/reports
+   WEBSITE_FILE=/data/website.md
+   PROMPTS_FILE=/data/website-prompts.json
+   CREDENTIALS_FILE=/data/credentials.json
+   ```
+4. Redeploy the service — the app will now read and write all persistent files to `/data`
+
 ## Deploy to Render.com
 
 ### Option A: Blueprint (recommended)
@@ -179,6 +240,7 @@ See `.env.example` for all configuration options including API keys, model setti
 ├── reports/                 # Generated markdown report files
 ├── website.md               # URLs to monitor (one per line)
 ├── website-prompts.json     # Per-URL custom LLM prompts (auto-created)
+├── railway.json             # Railway.com deployment config
 ├── render.yaml              # Render.com blueprint
 ├── package.json             # Root scripts (build + start)
 └── .env.example             # Configuration template
